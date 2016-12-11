@@ -6,6 +6,10 @@ RUN mkdir /heat2d3
 
 ADD *py /heat2d3/
 
+ADD static /heat2d3/static
+
+ADD template.html /heat2d3/
+
 ADD docker-entrypoint.sh /
 
 CMD /docker-entrypoint.sh

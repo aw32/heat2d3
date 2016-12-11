@@ -68,12 +68,12 @@ def convert():
         return Markup("<html><head><title>heat2dot</title></head><body>Failure<br/><pre>")+Markup.escape(error_messages)+Markup("</pre></body></html>")
     elif js != None:
         if error_messages == None:
-            return (Markup("<html><head><title>heat2d3</title></head>")+
+            return (Markup("<html><head><title>heat2d3</title>")+
                     Markup(js)+
                     Markup(templateHtml)+
                     Markup(licenses+"</body></html>"))
         else:
-            return (Markup("<html><head><title>heat2dot</title></head>")+
+            return (Markup("<html><head><title>heat2dot</title>")+
                     Markup(js)+
                     Markup(templateHtml)+
                     Markup("<br/><pre>")+
