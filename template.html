@@ -1,0 +1,704 @@
+<html>
+<head>
+<script src="static/d3.js"></script>
+<!--<script src="d3-force.js"></script>-->
+<script src="static/cola.v3.js"></script>
+<script>
+/*
+function bla(){
+var data = [4, 8, 15, 16, 23, 42];
+d3.select(".chart")
+  .selectAll("div")
+    .data(data)
+  .enter().append("div")
+    .style("width", function(d) { return d * 10 + "px"; })
+    .text(function(d) { return d; });
+}
+*/
+</script>
+<style>
+
+.chart div {
+  font: 10px sans-serif;
+  background-color: steelblue;
+  text-align: right;
+  padding: 3px;
+  margin: 1px;
+  color: white;
+}
+.background {
+    fill: lightgrey;
+}
+.zoombackground {
+    opacity: 0;
+}
+#page {
+    fill: WhiteSmoke;
+}
+.border {
+    fill: orange;
+}
+.node {
+    fill: lightblue;
+}
+.node.broken {
+    fill: red;
+}
+.server {
+    fill: cyan;
+    stroke: black;
+}
+.port {
+    fill: white;
+    stroke: black;
+}
+.net {
+    fill: lime;
+    stroke: black;
+}
+.subnet {
+    fill: white;
+    stroke: black;
+}
+.router {
+    fill: pink;
+    stroke: black;
+}
+.routerI {
+    fill: white;
+    stroke: black;
+}
+.floating {
+    fill: white;
+    stroke: black;
+}
+
+.nodetext {
+    display: none;
+    fill: red;
+    text-anchor: middle;
+    cursor: default;
+}
+.link {
+    stroke: red;
+    stroke-width: 2px;
+}
+g:hover > .node {
+    fill: blue;
+}
+g:hover > .nodetext {
+/*    font-size:30;*/
+    display: block;
+}
+
+</style>
+</head>
+<body onload="">
+<!--
+asdf
+<div class="chart">
+</div>
+asdfoo-->
+<svg class="graph"></svg>
+<script type="text/javascript">
+var triangle = function(x,y,s) {
+    return (x-s)+","+(y+s)+" "+(x)+","+(y-s)+" "+(x+s)+","+(y+s);
+};
+var octagon = function(x,y,s) {
+    return (x-s)+","+(y-s/3)+" "+(x-s/3)+","+(y-s)+" "+
+           (x+s/3)+","+(y-s)+" "+(x+s)+","+(y-s/3)+" "+
+           (x+s)+","+(y+s/3)+" "+(x+s/3)+","+(y+s)+" "+
+           (x-s/3)+","+(y+s)+" "+(x-s)+","+(y+s/3);
+};
+var diamond = function(x,y,s) {
+    return (x-s)+","+(y)+" "+(x)+","+(y-s)+" "+
+           (x+s)+","+(y)+" "+(x)+","+(y+s);
+};
+
+var egg = function(x,y,s) {
+    return "M "+(x-s)+" "+y+" q "+(s-s/2)+" "+(-s)+" "+(s)+" "+(-s)+" "+
+           "q "+(s/2)+" "+(0)+" "+(s)+" "+(s)+" "+
+           "q "+(s/2)+" "+(s)+" "+(-s)+" "+(s)+" "+
+           "q "+(-s-s/2)+" "+(0)+" "+(-s)+" "+(-s)+" ";
+};
+
+/*
+var nodes = [
+    {name:"iperf1",type:"server",id:"a"},
+    {name:"firewall1",type:"server",id:"asdf"},
+    {name:"tcpdump1",type:"server",id:"bar"}
+];
+var links = [{source:"a",target:"asdf"}];
+*/
+/*
+var nodes = [
+{id:"server0",name:"iperf1",type:"server",broken:false,},
+{id:"server1",name:"tcpdump1",type:"server",broken:false,},
+{id:"server2",name:"firewall1",type:"server",broken:false,},
+{id:"port0",name:"firewall1:cp03:output",type:"port",broken:false,},
+{id:"port1",name:"tcpdump1:cp01:mgmt",type:"port",broken:false,},
+{id:"port2",name:"firewall1:cp02:input",type:"port",broken:false,},
+{id:"port3",name:"iperf1:cp01:mgmt",type:"port",broken:false,},
+{id:"port4",name:"iperf1:cp02:input",type:"port",broken:false,},
+{id:"port5",name:"tcpdump1:cp03:output",type:"port",broken:false,},
+{id:"port6",name:"firewall1:cp01:mgmt",type:"port",broken:false,},
+{id:"port7",name:"iperf1:cp03:output",type:"port",broken:false,},
+{id:"port8",name:"tcpdump1:cp02:input",type:"port",broken:false,},
+{id:"net0",name:"firewall1:input",type:"net",broken:false,},
+{id:"net1",name:"firewall1:output",type:"net",broken:false,},
+{id:"net2",name:"iperf1:input-2-iperf",type:"net",broken:false,},
+{id:"net3",name:"sonata-demo:mgmt",type:"net",broken:false,},
+{id:"net4",name:"tcpdump1:input",type:"net",broken:false,},
+{id:"net5",name:"tcpdump1:output",type:"net",broken:false,},
+{id:"net6",name:"iperf1:output",type:"net",broken:false,},
+{id:"net7",name:"iperf1:input",type:"net",broken:false,},
+{id:"net8",name:"tcpdump1:tcpdump-2-output",type:"net",broken:false,},
+{id:"subnet0",name:"iperf1:output",type:"subnet",broken:false,},
+{id:"subnet1",name:"sonata-demo:mgmt",type:"subnet",broken:false,},
+{id:"subnet2",name:"firewall1:output",type:"subnet",broken:false,},
+{id:"subnet3",name:"firewall1:input",type:"subnet",broken:false,},
+{id:"subnet4",name:"tcpdump1:output",type:"subnet",broken:false,},
+{id:"subnet5",name:"tcpdump1:tcpdump-2-output",type:"subnet",broken:false,},
+{id:"subnet6",name:"tcpdump1:input",type:"subnet",broken:false,},
+{id:"subnet7",name:"iperf1:input-2-iperf",type:"subnet",broken:false,},
+{id:"subnet8",name:"iperf1:input",type:"subnet",broken:false,},
+{id:"routerNone",name:"None",type:"router",broken:false,},
+{id:"router0",name:"sonata-demo:iperf-2-firewall",type:"router",broken:false,},
+{id:"router1",name:"sonata-demo:firewall-2-tcpdump",type:"router",broken:false,},
+{id:"routerI0",name:"iperf1:iperf-2-firewall:1",type:"routerI",broken:false,},
+{id:"routerI1",name:"firewall1:iperf-2-firewall:1",type:"routerI",broken:false,},
+{id:"routerI2",name:"firewall1:firewall-2-tcpdump:1",type:"routerI",broken:false,},
+{id:"routerI3",name:"tcpdump1:firewall-2-tcpdump:1",type:"routerI",broken:false,},
+{id:"routerI4",name:"sonata-demo:mgmt:internal",type:"routerI",broken:true,},
+{id:"floating0",name:"fip0",type:"floating",broken:false,},
+{id:"floating1",name:"fip1",type:"floating",broken:false,},
+{id:"floating2",name:"fip2",type:"floating",broken:false,},
+];
+var links = [
+{srcType:"server",source:"server0",trgType:"port",target:"port3"},
+{srcType:"server",source:"server0",trgType:"port",target:"port4"},
+{srcType:"server",source:"server0",trgType:"port",target:"port7"},
+{srcType:"server",source:"server1",trgType:"port",target:"port1"},
+{srcType:"server",source:"server1",trgType:"port",target:"port8"},
+{srcType:"server",source:"server1",trgType:"port",target:"port5"},
+{srcType:"server",source:"server2",trgType:"port",target:"port6"},
+{srcType:"server",source:"server2",trgType:"port",target:"port2"},
+{srcType:"server",source:"server2",trgType:"port",target:"port0"},
+{srcType:"port",source:"port0",trgType:"net",target:"net1"},
+{srcType:"port",source:"port1",trgType:"net",target:"net3"},
+{srcType:"port",source:"port2",trgType:"net",target:"net0"},
+{srcType:"port",source:"port3",trgType:"net",target:"net3"},
+{srcType:"port",source:"port4",trgType:"net",target:"net7"},
+{srcType:"port",source:"port5",trgType:"net",target:"net5"},
+{srcType:"port",source:"port6",trgType:"net",target:"net3"},
+{srcType:"port",source:"port7",trgType:"net",target:"net6"},
+{srcType:"port",source:"port8",trgType:"net",target:"net4"},
+{srcType:"subnet",source:"subnet0",trgType:"net",target:"net6"},
+{srcType:"subnet",source:"subnet1",trgType:"net",target:"net3"},
+{srcType:"subnet",source:"subnet2",trgType:"net",target:"net1"},
+{srcType:"subnet",source:"subnet3",trgType:"net",target:"net0"},
+{srcType:"subnet",source:"subnet4",trgType:"net",target:"net5"},
+{srcType:"subnet",source:"subnet5",trgType:"net",target:"net8"},
+{srcType:"subnet",source:"subnet6",trgType:"net",target:"net4"},
+{srcType:"subnet",source:"subnet7",trgType:"net",target:"net2"},
+{srcType:"subnet",source:"subnet8",trgType:"net",target:"net7"},
+{srcType:"subnet",source:"subnet0",trgType:"routerI",target:"routerI0"},
+{srcType:"routerI",source:"routerI0",trgType:"router",target:"router0"},
+{srcType:"subnet",source:"subnet3",trgType:"routerI",target:"routerI1"},
+{srcType:"routerI",source:"routerI1",trgType:"router",target:"router0"},
+{srcType:"subnet",source:"subnet2",trgType:"routerI",target:"routerI2"},
+{srcType:"routerI",source:"routerI2",trgType:"router",target:"router1"},
+{srcType:"subnet",source:"subnet6",trgType:"routerI",target:"routerI3"},
+{srcType:"routerI",source:"routerI3",trgType:"router",target:"router1"},
+{srcType:"subnet",source:"subnet1",trgType:"routerI",target:"routerI4"},
+{srcType:"routerI",source:"routerI4",trgType:"router",target:"routerNone"},
+{srcType:"port",source:"port3",trgType:"floating",target:"floating0"},
+{srcType:"port",source:"port6",trgType:"floating",target:"floating1"},
+{srcType:"port",source:"port1",trgType:"floating",target:"floating2"},
+];
+*/
+var w = 1000;
+var h = 800;
+var minY = 40;
+var maxY = h;
+var minX = 40;
+var maxX = w;
+var sizes = {"server":20,"port":5,"net":10,"subnet":10,"router":10,"routerI":10,"floating":5};
+var types = {server:"rect",port:"circle",net:"rect",router:"polygon",subnet:"polygon",routerI:"polygon",floating:"path"};
+
+
+var pageBounds = { x: 100, y: 50, width: 1000, height: 800 };
+
+var borderTopLeft = { x: pageBounds.x, y: pageBounds.y, fixed: true , border: true};
+var borderBottomRight = { x: pageBounds.x + pageBounds.width, y: pageBounds.y + pageBounds.height, fixed: true , border: true};
+var tlIndex = nodes.push(borderTopLeft)-1;
+var brIndex = nodes.push(borderBottomRight)-1;
+
+var constraints = [];
+
+for (var i = 0; i < nodes.length; i++) { 
+        constraints.push({ axis: 'x', type: 'separation', left: tlIndex, right: i, gap: 5 });
+        constraints.push({ axis: 'y', type: 'separation', left: tlIndex, right: i, gap: 5 });
+        constraints.push({ axis: 'x', type: 'separation', left: i, right: brIndex, gap: 5 });
+        constraints.push({ axis: 'y', type: 'separation', left: i, right: brIndex, gap: 5 });
+    }
+
+
+
+
+
+var newLinks = [];
+links.forEach(function(v,i,a){
+    
+
+    var edge = JSON.parse(JSON.stringify(v));
+    edge.source = nodes.filter(function(n){return n.id === v.source;})[0];
+    edge.target = nodes.filter(function(n){return n.id === v.target;})[0];
+    newLinks.push(edge);
+});
+links = newLinks;
+
+/* create random positions*/
+nodes.forEach(function(v,i,a){
+    if(v.border != true) {
+        var x = Math.random()*(maxX-minX)+minX;
+        var y = Math.random()*(maxY-minY)+minY;
+        v.x = x;
+        v.y = y;
+    }
+});
+
+
+var zoom = d3.behavior.zoom()
+    .scaleExtent([0.1, 50])
+    .on("zoom", zoomed);
+
+/*
+var drag = d3.behavior.drag()
+    .origin(function(d) { return d; })
+    .on("dragstart", dragstarted)
+    .on("drag", dragged)
+    .on("dragend", dragended);
+*/
+
+var d3cola = cola.d3adaptor();
+
+/* create main svg*/
+svg = d3.select(".graph");
+svg.attr("width", w).attr("height",h);
+var bg_transform = [0,0];
+var bg_scale = 1.0;
+var bg1 = svg.append("rect").attr("class","background").attr("width","100%").attr("height","100%");
+var fakezoombox = svg.append("g").attr("transform","translate("+bg_transform[0]+","+bg_transform[1]+") scale("+bg_scale+")");
+/* create border rect*/
+var page = fakezoombox.append('rect').attr('id', 'page').attr(pageBounds);
+
+
+var bg = svg.append("rect").attr("class","zoombackground").attr("width","100%").attr("height","100%").call(zoom);
+
+var 
+
+
+/* create translation box*/
+svg = svg.append("g").attr("transform","translate("+bg_transform[0]+","+bg_transform[1]+") scale("+bg_scale+")");
+
+
+
+/* create link objects*/
+var linklines = svg.selectAll("line").data(links).enter()
+    .append("line").attr("class","link")
+    .attr('x1',function(d){ return d.source.x;})
+    .attr('y1',function(d){ return d.source.y;})
+    .attr('x2',function(d){ return d.target.x;})
+    .attr('y2',function(d){ return d.target.y;});
+
+function setupNode(d, innode, action){
+    var size;
+    var ret = {};
+    size = sizes[d.type];
+
+    var node;
+    var shape = "circle";
+    if (d.type in types)
+        shape = types[d.type];
+    if (action === "create") { 
+        node = d3.select(innode)
+            .append(shape);
+        ret.node = node;
+    } else
+        node = d3.select(innode).select(shape);
+
+    if (d.type === "server" || d.type === "net") {
+        node
+            .attr("class","node "+d.type+(d.broken?" broken":""))
+            .attr("width",size)
+            .attr("height",size)
+            .attr("x",d.x-size/2)
+            .attr("y",d.y-size/2);
+        ret.textX = d.x;
+        ret.textY = d.y-size;
+        d.width = size;
+        d.height = size;
+    } else
+    if (d.type === "port") {
+        node
+            .attr("class","node port"+(d.broken?" broken":""))
+            .attr("r",size)
+            .attr("cx",d.x)
+            .attr("cy",d.y);
+        ret.textX = node.attr("cx");
+        ret.textY = node.attr("cy")-(2*size);
+        d.width = 2*size;
+        d.height = 2*size;
+    } else
+    if (d.type === "router") {
+        node
+            .attr("class","node router"+(d.broken?" broken":""))
+            .attr("points",diamond(d.x,d.y,size));
+        ret.textX = d.x;
+        ret.textY = d.y-(2*size);
+        d.width = 2*size;
+        d.height = 2*size;
+    } else
+    if (d.type === "subnet") {
+        node
+            .attr("class","node subnet"+(d.broken?" broken":""))
+            .attr("points", octagon(d.x,d.y,size));
+        ret.textX = d.x;
+        ret.textY = d.y-(2*size);
+        d.width = 2*size;
+        d.height = 2*size;
+    } else
+    if (d.type === "routerI") {
+        node
+            .attr("class","node routerI"+(d.broken?" broken":""))
+            .attr("points", triangle(d.x,d.y,size))
+        ret.textX = d.x;
+        ret.textY = d.y-(2*size);
+        d.width = 2*size;
+        d.height = 2*size;
+    } else
+    if (d.type === "floating") {
+        node
+            .attr("class","node floating"+(d.broken?" broken":""))
+            .attr("d", egg(d.x,d.y,size));
+        ret.textX = d.x;
+        ret.textY = d.y-(2*size);
+        d.width = 2*size;
+        d.height = 2*size;
+    } else
+    if (d.border === true) {
+        node
+            .attr("class","border")
+            .attr("cx",d.x)
+            .attr("cy",d.y)
+            .attr("r",10);
+        d.width = 20;
+        d.height = 20;
+    }
+
+    return ret;
+}
+
+/* create node objects*/
+var nodecirc = svg.selectAll("g").data(nodes).enter()
+    .append("g");
+nodecirc.each(function(d){
+    var node = null;
+    var ret;
+    ret = setupNode(d, this, "create");
+    if (ret.textX != null) {
+        d3.select(this)
+            .append("text")
+            .attr("class","nodetext")
+            .attr("x",ret.textX)
+            .attr("y",ret.textY)
+            .text(function(d){return d.name;})
+    }
+    d3.select(this).call(d3cola.drag)
+    .on('mouseup', function (d) {
+                d.fixed = 1;
+                d3cola.avoidOverlaps(true);
+                d3cola.alpha(1); // fire it off again to satify gridify
+            }).on("mousedown", safeDragStart);
+    //d3.select(this).call(function(x){console.log(x);});
+    d3.select(this).on("dblclick", function(d){d.fixed = 0; d3cola.resume();});
+    //console.log("what?");
+});
+
+//console.log(linklines);
+
+    d3cola.linkDistance(function(e){
+    if(e.srcType === "server" && e.trgType === "port")
+        return sizes["server"] + sizes["port"] -10;
+    if(e.srcType === "subnet" && e.trgType === "net")
+        return sizes["subnet"] + sizes["net"];
+    if(e.srcType === "routerI" && e.trgType === "router")
+        return sizes["routerI"] + sizes["router"];
+    return 40;
+})
+    .size([w/2,h/2]);
+
+d3cola.nodes(nodes).links(links);
+
+d3cola.on('tick',function(){
+window.requestAnimationFrame(function(){
+    linklines
+        .attr('x1',function(d){ return d.source.x;})
+        .attr('y1',function(d){ return d.source.y;})
+        .attr('x2',function(d){ return d.target.x;})
+        .attr('y2',function(d){ return d.target.y;});
+
+
+    //console.log(nodecirc);
+    nodecirc.each(function(d){
+
+        var ret = setupNode(d, this, "update");
+
+/*
+        if(d.type === "server" || d.type === "net") {
+            d3.select(this).select("rect")
+                .attr("x",d.x-sizes[d.type]/2)
+                .attr("y",d.y-sizes[d.type]/2);
+            d3.select(this).select("text")
+                .attr("x",d.x-sizes[d.type]/2)
+                .attr("y",d.y-sizes[d.type]/2);
+        } else
+        if(d.type === "port") {
+            d3.select(this).select("circle")
+                .attr("cx",d.x)
+                .attr("cy",d.y)
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "router") {
+            d3.select(this).select("polygon")
+                .attr("points",diamond(d.x,d.y,sizes["router"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "subnet") {
+            d3.select(this).select("polygon")
+                .attr("points", octagon(d.x,d.y,sizes["subnet"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "routerI") {
+            d3.select(this).select("polygon")
+                .attr("points", triangle(d.x,d.y,sizes["routerI"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "floating") {
+            d3.select(this).select("path")
+                .attr("d", egg(d.x,d.y,sizes["floating"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        }
+        */
+        if (ret.textX != null) {
+            d3.select(this).select("text")
+                 .attr("x", ret.textX)
+                 .attr("y", ret.textY);
+        }
+    });
+
+    });
+/*
+    nodecirc.selectAll("text").attr('x',function(d){
+        return d.x;
+    });
+    nodecirc.selectAll("text").attr('y',function(d){
+        return d.y;
+    });
+*/
+    //console.log(linklines);
+});
+d3cola
+    .constraints(constraints)
+    .handleDisconnected(false)
+    .avoidOverlaps(true)
+    .start();
+/*
+var force = d3.layout.force()
+    .nodes(nodes)
+    .links([])
+    .gravity(0.1)
+    .charge(-1000)
+    .size([500,200]);
+*/
+/*
+var bg_dragStart = null;
+bg.on("mousedown", function(d,i){
+    var node = d3.select(this);
+    var coords = d3.mouse(this);
+    bg_dragStart = coords;
+    if(node.attr("class") === "background")
+        console.log("bg mouse");
+});
+bg.on("mousemove", function(d,i){
+    if(bg_dragStart !== null) {
+        var coords = d3.mouse(this);
+        var diff = [coords[0]-bg_dragStart[0],coords[1]-bg_dragStart[1]];
+        bg_dragStart = coords;
+        bg_transform[0] += diff[0];
+        bg_transform[1] += diff[1];
+        svg.attr("transform","translate("+bg_transform[0]+","+bg_transform[1]+") scale("+bg_scale+")");
+    }
+});
+bg.on("mouseup", function(d,i){
+    bg_dragStart = null;
+});
+
+var drag = d3.behavior.drag()
+    .origin(function(d) { return d; })
+    .on("dragstart", dragstarted)
+    .on("drag", dragged)
+    .on("dragend", dragended);
+*/
+
+function zoomed(e) {
+  svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+  fakezoombox.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+}
+
+safeDragNode = null;
+
+function safeDragStart(e) {
+    safeDragNode = e;
+    d3cola.avoidOverlaps(false);
+}
+
+function safeDragStop(e) {
+    if(safeDragNode != null) {
+        safeDragNode.fixed = 1;
+        safeDragNode = null;
+    }
+}
+
+document.addEventListener('mouseup',safeDragStop,false);
+
+function dragstarted(d) {
+  d3.event.sourceEvent.stopPropagation();
+  //d3.select(this).classed("dragging", true);
+  //d3cola.stop();
+  //d.fixed = false;
+  d3cola.dragStart(d);
+  console.log("asdf");
+}
+
+function dragged(d) {
+//  d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
+
+        d.x = d3.event.x;
+        d.y = d3.event.y;
+
+        if(d.type === "server" || d.type === "net") {
+            d3.select(this).select("rect")
+                .attr("x",d.x-sizes[d.type]/2)
+                .attr("y",d.y-sizes[d.type]/2);
+            d3.select(this).select("text")
+                .attr("x",d.x-sizes[d.type]/2)
+                .attr("y",d.y-sizes[d.type]/2);
+        } else
+        if(d.type === "port") {
+            d3.select(this).select("circle")
+                .attr("cx",d.x)
+                .attr("cy",d.y)
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "router") {
+            d3.select(this).select("polygon")
+                .attr("points",diamond(d.x,d.y,sizes["router"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "subnet") {
+            d3.select(this).select("polygon")
+                .attr("points", octagon(d.x,d.y,sizes["subnet"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "routerI") {
+            d3.select(this).select("polygon")
+                .attr("points", triangle(d.x,d.y,sizes["routerI"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        } else
+        if(d.type === "floating") {
+            d3.select(this).select("path")
+                .attr("d", egg(d.x,d.y,sizes["floating"]));
+            d3.select(this).select("text")
+                .attr("x",d.x)
+                .attr("y",d.y)
+        }
+        linklines.each(function(d){
+            d3.select(this)
+                .attr('x1',function(d){ return d.source.x;})
+                .attr('y1',function(d){ return d.source.y;})
+                .attr('x2',function(d){ return d.target.x;})
+                .attr('y2',function(d){ return d.target.y;});
+        });;
+/*
+        var partLinks = links.filter(function(l){ return l.source === d || l.target === d;});
+        partLinks.forEach(function(v,i,a){
+            if(v.source === d) {
+                d3.select(v)
+                    .attr('x1',d.x)
+                    .attr('y1',d.y)
+            }
+            if(v.target === d) {
+                d3.select(v)
+                    .attr('x2',d.x)
+                    .attr('y2',d.y);
+            }
+        });
+*/
+  //d3.select(this).classed("dragging", false);
+    //d3cola.start();
+}
+
+function dragended(d) {
+  //d3.select(this).classed("dragging", false);
+  d.fixed = true;
+  d3cola.dragEnd(d);
+  d3cola.resume();
+}
+
+</script>
+<h4>Legend</h4>
+<svg width="500" height="235">
+
+<rect class="node server" width="20" height="20" x="20" y="20"></rect>
+<text class="text" x="50" y="35">Server</text>
+
+<circle class="node port" r="5" cx="30" cy="60"></circle>
+<text class="text" x="50" y="65">Port</text>
+
+<rect class="node net" width="10" height="10" x="25" y="80"></rect>
+<text class="text" x="50" y="90">Net</text>
+
+<polygon class="node subnet" points="20,111.66666666666667 26.666666666666668,105 33.333333333333336,105 40,111.66666666666667 40,118.33333333333333 33.333333333333336,125 26.666666666666668,125 20,118.33333333333333"></polygon>
+<text class="text" x="50" y="120">Subnet</text> # 10
+
+<polygon class="node router" points="20,145 30,135 40,145 30,155"></polygon>
+<text class="text" x="50" y="150">Router</text>
+
+<polygon class="node routerI" points="20,185 30,165 40,185"></polygon>
+<text class="text" x="50" y="180">Router Interface</text>
+
+<path class="node floating" d="M 25 205 q 2.5 -5 5 -5 q 2.5 0 5 5 q 2.5 5 -5 5 q -7.5 0 -5 -5 "></path>
+<text class="text" x="50" y="210">Floating IP</text>
+
+</svg>
+<h4>Errors</h4>
